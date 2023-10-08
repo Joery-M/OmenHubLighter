@@ -16,6 +16,9 @@ OMEN Hub Lighter is an extension of OMEN Hub Light with extra functionality and 
 - New enum values for fan control (Quiet mode wasn't working for me in the original version)
 - Added fan speed text (Not sure how accurate it is)
 
+![Fan control menu](<https://raw.githubusercontent.com/Joery-M/OmenHubLighter/master/README Images/Fan control.jpg>)
+![Remap menu](<https://raw.githubusercontent.com/Joery-M/OmenHubLighter/master/README Images/remap.png>)
+
 ## Why I need it?
 
 Tuning your computer fast when others are still launching OMEN Gaming Hub, without annoying HP product advertisements.
