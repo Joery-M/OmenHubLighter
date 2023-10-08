@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Hp.Ohl.WmiService;
 using Hp.Omen.AppShim;
 using Hp.Omen.OmenCommonLib.PowerControl.Enum;
@@ -19,7 +20,7 @@ namespace Hp.Omen.OmenCommonLib
             {
                 if (_systemDesignData == null)
                 {
-                    _systemDesignData = (byte[]) CurrentApp.Properties["SystemDesignData"];
+                    _systemDesignData = (byte[])CurrentApp.Properties["SystemDesignData"];
                     if (_systemDesignData == null)
                     {
                         var inputData = new byte[4];
@@ -118,11 +119,11 @@ namespace Hp.Omen.OmenCommonLib
 
         public ThermalPolicyVersion GetThermalPolicyVersion()
         {
-            var result = ThermalPolicyVersion.V0;
-            var systemDesignData = SystemDesignData;
+            ThermalPolicyVersion thermalPolicyVersion = ThermalPolicyVersion.V0;
+            byte[] systemDesignData = this.SystemDesignData;
             if (systemDesignData != null && systemDesignData.Length != 0)
-                result = (ThermalPolicyVersion) systemDesignData[3];
-            if (new[]
+                thermalPolicyVersion = (ThermalPolicyVersion)systemDesignData[3];
+            if (((IEnumerable<string>)new string[6]
             {
                 "8607",
                 "8746",
@@ -130,10 +131,10 @@ namespace Hp.Omen.OmenCommonLib
                 "8749",
                 "874A",
                 "8748"
-            }.Contains(OmenSMBiosHelper.SystemID))
-                result = ThermalPolicyVersion.V0;
-            OMENEventSource.Log.Info("GetThermalPolicyVersion(), version = " + result);
-            return result;
+            }).Contains<string>(OmenSMBiosHelper.SystemID))
+                thermalPolicyVersion = ThermalPolicyVersion.V0;
+            OMENEventSource.Log.Info("GetThermalPolicyVersion(), version = " + thermalPolicyVersion.ToString());
+            return thermalPolicyVersion;
         }
 
         public List<byte> GetFanLevel()
@@ -150,6 +151,80 @@ namespace Hp.Omen.OmenCommonLib
             }
 
             return data;
+        }
+
+        public int SetSwFanControlLevel(int cpuFanLevel, int gpuFanLevel)
+        {
+            int num = BiosWmiCmd_Set(131080, 46, new byte[2]
+            {
+                Convert.ToByte(cpuFanLevel),
+                Convert.ToByte(gpuFanLevel)
+            });
+
+            return num;
+        }
+
+        public int SetFanMode(PerformanceMode mode, bool isMapped = true)
+        {
+            byte[] array = new byte[2]
+            {
+                255,
+                (byte)mode
+            };
+            OMENEventSource.Log.Info("SetFanModeAsync(), mode = " + mode);
+            if (isMapped)
+            {
+                switch (GetThermalPolicyVersion())
+                {
+                    case ThermalPolicyVersion.V1:
+                        switch (mode)
+                        {
+                            case PerformanceMode.Default:
+                            case PerformanceMode.Eco:
+                                mode = PerformanceMode.L2;
+                                break;
+                            case PerformanceMode.Performance:
+                                mode = PerformanceMode.L7;
+                                break;
+                            case PerformanceMode.Cool:
+                                mode = PerformanceMode.L4;
+                                break;
+                        }
+
+                        break;
+                    case ThermalPolicyVersion.V0:
+                        if (mode == PerformanceMode.Eco)
+                        {
+                            mode = PerformanceMode.Default;
+                        }
+
+                        break;
+                }
+
+                array[1] = (byte)mode;
+            }
+
+            int num = BiosWmiCmd_Set(131080, 26, array);
+
+            return num;
+        }
+
+        public MaxFanMode GetMaxFan()
+        {
+            byte[] array = new byte[4];
+            MaxFanMode mode = MaxFanMode.Off;
+            byte[] array2 = BiosWmiCmd_Get(131080, 38, array, /*array.Length,*/ 4);
+            if (array2 != null && array2.Length != 0)
+            {
+                mode = (MaxFanMode)array2[0];
+            }
+
+            return mode;
+        }
+
+        public int SetMaxFan(MaxFanMode mode)
+        {
+            return BiosWmiCmd_Set(131080, 39, new byte[1] { (byte)mode });
         }
     }
 }

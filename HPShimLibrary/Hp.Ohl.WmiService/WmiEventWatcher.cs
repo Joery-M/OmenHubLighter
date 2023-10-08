@@ -43,6 +43,14 @@ namespace Hp.Ohl.WmiService
             HpBiosDataOut dataOut;
             switch (args.eventId)
             {
+                case 29:
+                    dataOut = HpBiosIntHelper.InvokeBiosCommand(1, 15, 4);
+                    args.eventPayload = dataOut.Data switch
+                    {
+                        _ when dataOut.Data[0] == 1 => new OmenKeyPressedPayload(),
+                        _ => new NotHandledPayload { OriginalBytes = dataOut.Data},
+                    };
+                    break;
                 case 4:
                     dataOut = HpBiosIntHelper.InvokeBiosCommand(1, 12, 4);
                     args.eventPayload = dataOut.Data switch
